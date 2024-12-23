@@ -57,7 +57,7 @@ export const receiptController = {
 
             logInfo(`GPT Identified Ingredients: ${JSON.stringify(ingredients)}`);
 
-            // 3. 임시 파일 삭제
+            // 3. 임시 파일 삭제!
             await fs.unlink(req.file.path);
 
             // 4. 결과 반환
