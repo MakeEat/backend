@@ -56,11 +56,26 @@ async function generateInitialRecipe(requirements) {
 
 // 2. 영양 정보만 계산
 async function calculateNutritionFacts(recipe, nutritionInfo) {
+    // 필요한 영양 정보만 추출
+    const simplifiedNutrition = nutritionInfo.map(item => ({
+        ingredient: item.ingredient,
+        nutrition: {
+            calories: item.nutrition.calories,
+            protein: item.nutrition.protein,
+            carbohydrate: item.nutrition.carbohydrate,
+            fat: item.nutrition.fat,
+            fiber: item.nutrition.fiber,
+            sugar: item.nutrition.sugar,
+            sodium: item.nutrition.sodium
+        }
+    }));
+
     const prompt = `Calculate nutrition facts per serving for this recipe:
         Recipe Ingredients: ${JSON.stringify(recipe.ingredients)}
-        FatSecret Nutrition Data: ${JSON.stringify(nutritionInfo)}
+        FatSecret Nutrition Data: ${JSON.stringify(simplifiedNutrition)}
+        Servings: ${recipe.servings}
         
-        Return ONLY a valid JSON object in this EXACT format, with NO explanations:
+        Return ONLY a valid JSON object in this EXACT format:
         {
             "nutritionFacts": {
                 "calories": number,
@@ -71,41 +86,33 @@ async function calculateNutritionFacts(recipe, nutritionInfo) {
                 "sugar": number,
                 "sodium": number
             }
-        }
-        
-        - All values must be numbers (no strings, no units)
-        - Round to 1 decimal place
-        - Do not include any text before or after the JSON
-        - Do not show your calculations`;
+        }`;
 
     const completion = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
             {
                 "role": "system",
-                "content": "You are a nutrition calculator. Return ONLY the exact JSON format requested. No explanations or calculations allowed."
+                "content": "You are a nutrition calculator. Return ONLY the exact JSON format requested."
             },
             {
                 "role": "user",
                 "content": prompt
             }
         ],
-        temperature: 0.1,  // 더 결정적인 응답을 위해 낮춤
-        max_tokens: 500
+        temperature: 0.1
     });
 
     try {
         const content = completion.choices[0].message.content.trim();
-        logInfo(`Nutrition Facts GPT Response: ${content}`);
-        
         const parsed = JSON.parse(content);
+        
         if (!parsed.nutritionFacts) {
             throw new Error('Invalid nutrition facts format');
         }
         
         return parsed;
     } catch (error) {
-        logError(`JSON parsing error: ${error.message}`);
         throw new Error('Failed to parse nutrition facts from GPT response');
     }
 }
@@ -140,7 +147,7 @@ export const recipeController = {
                 logError(`Test user creation error: ${error.message}`);
             }
 
-            // 1. 전체 레시��� 생성 (영양 정보 제외)
+            // 1. 전체 레시피 생성 (영양 정보 제외)
             const initialRecipe = await generateInitialRecipe(requirements);
             
             // 2. FatSecret API로 영양 정보 조회
