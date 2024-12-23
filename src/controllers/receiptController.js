@@ -35,9 +35,10 @@ export const receiptController = {
                     {
                         role: "system",
                         content: `You are an expert at identifying food ingredients from receipt text.
-                                 Analyze the following receipt text and identify all food ingredients.
-                                 Return ONLY a JSON array of ingredients in both Korean and English if possible.
-                                 Format: ["ingredient1", "ingredient2", ...]`
+                                 Extract ONLY food items from the receipt.
+                                 Return ONLY a valid JSON array of strings.
+                                 Example: ["rice", "kimchi", "garlic"]
+                                 Do not include any explanations or additional text.`
                     },
                     {
                         role: "user",
@@ -47,7 +48,13 @@ export const receiptController = {
                 temperature: 0.3
             });
 
-            const ingredients = JSON.parse(completion.choices[0].message.content);
+            const content = completion.choices[0].message.content.trim();
+            const ingredients = JSON.parse(content);
+            
+            if (!Array.isArray(ingredients)) {
+                throw new Error('Response is not an array');
+            }
+
             logInfo(`GPT Identified Ingredients: ${JSON.stringify(ingredients)}`);
 
             // 3. 임시 파일 삭제
