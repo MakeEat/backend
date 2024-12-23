@@ -362,3 +362,5 @@ export const recipeController = {
         }
     }
 }; 
+
+// Todo: fatsecret 영양 정보 조회 테스트
