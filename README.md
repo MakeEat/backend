@@ -1,6 +1,9 @@
 # MakeEat - Smart Recipe Generation System
 
 ## 프로젝트 소개 | Project Introduction
+
+![MakeEat Logo](https://raw.githubusercontent.com/MakeEat/backend/main/makeEat_Logo.png)
+
 MakeEat은 영수증 이미지 분석과 AI를 활용하여 사용자의 구매 식재료를 기반으로 맞춤형 레시피를 생성하는 스마트 레시피 생성 시스템입니다.
 
 MakeEat is a smart recipe generation system that creates personalized recipes based on users' purchased ingredients through receipt image analysis and AI technology.
