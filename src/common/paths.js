@@ -29,7 +29,8 @@ const paths = {
     },
     receipt: {
         base: '/receipt',
-        analyze: '/analyze'
+        analyze: '/analyze',
+        analyzeAdvanced: '/analyze/advanced'
     }
 };
 

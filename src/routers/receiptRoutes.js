@@ -104,5 +104,6 @@ const upload = multer({
  *                       example: "Failed to analyze receipt"
  */
 router.post(paths.receipt.analyze, upload.single('receipt'), receiptController.analyzeReceipt);
+router.post(paths.receipt.analyzeAdvanced, upload.single('receipt'), receiptController.analyzeReceiptAdvanced);
 
 export default router; 

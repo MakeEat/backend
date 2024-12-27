@@ -138,23 +138,37 @@ export const recipeController = {
             // 2. FatSecret API로 영양 정보 조회
             const nutritionInfo = [];
             for (const ingredient of initialRecipe.ingredients) {
-                const [name] = ingredient.split(':');
-                logInfo(`Searching FatSecret for ingredient: ${name}`);
+                const [name, amount] = ingredient.split(':');
                 const searchResult = await fatSecretService.searchFood(name);
-                logInfo(`FatSecret search response: ${JSON.stringify(searchResult)}`);
                 
                 if (searchResult.foods?.food?.length > 0) {
                     const foodId = searchResult.foods.food[0].food_id;
-                    logInfo(`Getting nutrition for food_id: ${foodId}`);
                     const nutrition = await fatSecretService.getFoodNutrition(foodId);
-                    logInfo(`FatSecret nutrition response: ${JSON.stringify(nutrition)}`);
                     
+                    // serving 데이터 정규화 및 요약
+                    const servingData = nutrition.food?.servings?.serving;
+                    const servings = Array.isArray(servingData) ? servingData : [servingData];
+                    
+                    // 100g 기준 영양정보 찾기
+                    const serving = servings.find(s => 
+                        s.serving_description === "100 g" || 
+                        (s.metric_serving_amount === "100.000" && s.metric_serving_unit === "g")
+                    ) || servings[0];
+
+                    // 필요한 정보만 추출하여 저장
                     nutritionInfo.push({
-                        ingredient,
-                        nutrition: nutrition.food.servings.serving
+                        name,
+                        amount,
+                        per100g: {
+                            calories: parseFloat(serving.calories),
+                            protein: parseFloat(serving.protein),
+                            carbs: parseFloat(serving.carbohydrate),
+                            fat: parseFloat(serving.fat),
+                            fiber: parseFloat(serving.fiber),
+                            sugar: parseFloat(serving.sugar),
+                            sodium: parseFloat(serving.sodium)
+                        }
                     });
-                } else {
-                    logInfo(`No FatSecret results found for: ${name}`);
                 }
             }
 
