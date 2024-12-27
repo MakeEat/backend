@@ -1,4 +1,3 @@
-# MakeEat - 스마트 레시피 생성 시스템
 # MakeEat - Smart Recipe Generation System
 
 ## 프로젝트 소개 | Project Introduction
