@@ -6,8 +6,77 @@ import FormData from 'form-data';
 import { createWorker } from 'tesseract.js';
 
 export const receiptController = {
-    // 기본 OCR (Tesseract)
+    // 새로운 기본 OCR (EasyOCR + Tesseract)
     analyzeReceipt: async (req, res) => {
+        try {
+            if (!req.file) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'NO_FILE',
+                        message: 'No receipt image provided'
+                    }
+                });
+            }
+
+            logInfo(`Analyzing receipt image with Advanced OCR: ${req.file.filename}`);
+
+            // FastAPI 서버 호출하여 텍스트 영역 감지
+            const formData = new FormData();
+            const fileBuffer = await fs.readFile(req.file.path);
+            formData.append('file', fileBuffer, { filename: req.file.originalname });
+
+            const ocrResponse = await axios.post('http://localhost:5001/ocr', formData, {
+                headers: {
+                    ...formData.getHeaders(),
+                }
+            });
+
+            if (!ocrResponse.data.success) {
+                throw new Error(ocrResponse.data.error);
+            }
+
+            // 감지된 영역이 없는 경우
+            if (ocrResponse.data.regions === 0) {
+                throw new Error('No text regions detected in the image');
+            }
+
+            // Base64 이미지를 파일로 저장
+            const imageBuffer = Buffer.from(ocrResponse.data.image, 'base64');
+            await fs.writeFile(`${req.file.path}_regions.png`, imageBuffer);
+
+            // Tesseract로 텍스트 인식
+            const worker = await createWorker();
+            const { data: { text } } = await worker.recognize(`${req.file.path}_regions.png`, {
+                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,$ '
+            });
+            await worker.terminate();
+
+            logInfo(`Advanced OCR Result: ${text}`);
+
+            // GPT 분석 및 결과 반환
+            const ingredients = await analyzeWithGPT(text);
+
+            // 임시 파일들 삭제
+            await fs.unlink(req.file.path);
+            await fs.unlink(`${req.file.path}_regions.png`);
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    ingredients,
+                    rawText: text,
+                    ocrType: 'advanced'
+                }
+            });
+
+        } catch (error) {
+            handleError(error, req, res);
+        }
+    },
+
+    // Legacy OCR (Tesseract only)
+    analyzeLegacyReceipt: async (req, res) => {
         try {
             if (!req.file) {
                 return res.status(400).json({
@@ -40,70 +109,6 @@ export const receiptController = {
                     ingredients,
                     rawText: text,
                     ocrType: 'tesseract'
-                }
-            });
-
-        } catch (error) {
-            handleError(error, req, res);
-        }
-    },
-
-    // 고정밀 OCR (EasyOCR + Tesseract)
-    analyzeReceiptAdvanced: async (req, res) => {
-        try {
-            if (!req.file) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        code: 'NO_FILE',
-                        message: 'No receipt image provided'
-                    }
-                });
-            }
-
-            logInfo(`Analyzing receipt image with Advanced OCR: ${req.file.filename}`);
-
-            // FastAPI 서버 호출하여 텍스트 영역 감지
-            const formData = new FormData();
-            const fileBuffer = await fs.readFile(req.file.path);
-            formData.append('file', fileBuffer, { filename: req.file.originalname });
-
-            const ocrResponse = await axios.post('http://localhost:5001/ocr', formData, {
-                headers: {
-                    ...formData.getHeaders(),
-                }
-            });
-
-            if (!ocrResponse.data.success) {
-                throw new Error(ocrResponse.data.error);
-            }
-
-            // Base64 이미지를 파일로 저장
-            const imageBuffer = Buffer.from(ocrResponse.data.image, 'base64');
-            await fs.writeFile(`${req.file.path}_regions.png`, imageBuffer);
-
-            // Tesseract로 텍스트 인식
-            const worker = await createWorker();
-            const { data: { text } } = await worker.recognize(`${req.file.path}_regions.png`, {
-                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,$ '
-            });
-            await worker.terminate();
-
-            logInfo(`Advanced OCR Result: ${text}`);
-
-            // GPT 분석 및 결과 반환
-            const ingredients = await analyzeWithGPT(text);
-
-            // 임시 파일들 삭제
-            await fs.unlink(req.file.path);
-            await fs.unlink(`${req.file.path}_regions.png`);
-
-            return res.status(200).json({
-                success: true,
-                data: {
-                    ingredients,
-                    rawText: text,
-                    ocrType: 'advanced'
                 }
             });
 

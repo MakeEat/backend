@@ -30,7 +30,7 @@ const paths = {
     receipt: {
         base: '/receipt',
         analyze: '/analyze',
-        analyzeAdvanced: '/analyze/advanced'
+        legacyAnalyze: '/analyze/legacy'
     }
 };
 
